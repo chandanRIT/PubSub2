@@ -21,6 +21,7 @@ public class Utils {
 			CMD_SUBKW = "SUBKW",
 			CMD_UNSUBKW = "UNSUBKW",
 			CMD_LISTSUBTOPICS = "LISTSUBTOPICS",
+			CMD_PULLNOTIFS = "PULLNOTIFS",
 			CMD_EXIT = "EXIT";
 			
 	public static final String STATUS_OKAY = ":)", STATUS_NOKAY = ":(";

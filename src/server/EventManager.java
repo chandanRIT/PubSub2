@@ -5,25 +5,28 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.InetAddress;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Queue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 import other.Event;
-import client.PubSubAgent;
 import other.Topic;
 import other.Utils;
+import client.PubSubAgent;
 
 public class EventManager{
-	static Map<String, Topic> topics = new HashMap<>();
-	static Map<String, List<Integer>> topicsSubsMap = new HashMap<>(); //subscribers (PubSubAgent) have integer Ids
+	static Map<String, Topic> topics = new HashMap<>(); //map between topicNames and Topic obkects
+	static Map<String, List<Integer>> topicsSubsMap = new HashMap<>(); //map between topicNames and their Subscriber clientIds
 	//static Map<String, List<Event>> topicsEventsMap = new HashMap<>();
-	static BlockingQueue<Event> blockingEventsQ = new LinkedBlockingQueue<>();
-	static Map<Integer, InetAddress> idIpMap = new HashMap<>();
+	static BlockingQueue<Event> blockingEventsQ = new LinkedBlockingQueue<>(); // the events queue to which events are added and dispatched from continuously
+	static Map<Integer, InetAddress> idIpMap = new HashMap<>(); //map between clientIds and their ipaddresses 
+	static Map<Integer, Queue<Event>> pendingNotifMap = new HashMap<>(); //map between clientIds and their associated pending EventsQ 
+	
 	/*
 	 * Start the repo service
 	 */
@@ -68,8 +71,12 @@ public class EventManager{
 				pw.flush();
 				notifSocket.close(); //closes the EM's end of the socket
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				Queue<Event> pendingQ;
+				if((pendingQ = pendingNotifMap.get(i)) == null){
+					pendingNotifMap.put(i, pendingQ = new LinkedList<>());
+				}
+				pendingQ.add(event);
+				//e.printStackTrace();
 			}
 		}
 	}
@@ -89,7 +96,6 @@ public class EventManager{
 	// this method would probably be not needed if we notify subscribers on every event (maybe via callbacks)
 	public static boolean addEvent(Event event){
 		if(! topics.containsKey(event.getItsTopic())) return false; //Invalid topic 
-		
 		blockingEventsQ.add(event);
 		/*
 		List<Event> eventsList = topicsEventsMap.get(event.getItsTopic()); 
@@ -100,32 +106,38 @@ public class EventManager{
 		eventsList.add(event);
 		*/
 		Utils.debug(Utils.gson.toJson(event));
-		//notifySubscribers(event);
 		return true;
 	}
 	
 	/*
 	 * add subscriber to the internal list
 	 */
-	public static  boolean addSubscriber(String topicName, int subscriberId, InetAddress ipAddress){
+	public static  boolean addSubscriber(String topicName, int subId, InetAddress ipAddress){
 		if(!topics.containsKey(topicName)) return false;
 		List<Integer> subscribersList;
 		synchronized (topicsSubsMap) {
 			if(( subscribersList = topicsSubsMap.get(topicName) ) == null){
 				topicsSubsMap.put(topicName, subscribersList = new ArrayList<>());
 			}
-			subscribersList.add(subscriberId);
+			subscribersList.add(subId);
 		}
-		idIpMap.put(subscriberId, ipAddress);
-		Utils.debug("Subscriber:" + subscriberId + " subscribed to topic: "+ topicName);
+		idIpMap.put(subId, ipAddress);
+		Utils.debug("Subscriber:" + subId + " subscribed to topic: "+ topicName);
 		return true;
 	}
 	
 	/*
 	 * remove subscriber from the list
 	 */
-	public static boolean removeSubscriber(){
+	public static boolean removeSubscriber(int subId){
 		return false;
+	}
+	
+	public static Queue<Event> clearPendingEventsForClient(int id){
+		Queue<Event> eventsQ = pendingNotifMap.get(id);
+		if(eventsQ == null) return null;
+		pendingNotifMap.put(id, new LinkedList<Event>());
+		return eventsQ;
 	}
 	
 	/*

@@ -10,46 +10,75 @@ import java.net.Socket;
 import java.util.LinkedList;
 import java.util.Queue;
 
+import com.google.gson.JsonSyntaxException;
+
 import other.Utils;
 import other.Event;
 
 public class Client {
 	
 	private Socket socket;
-	private ServerSocket notificationsSocket;
-	
 	private PrintWriter printWriter;
 	private BufferedReader bReader;
+
 	private StringBuilder sBuff;
 	
 	int clientId;
+	String destIPAddress;
 	
-	public Client(int clientId) {
-		Queue<Event> eventsQ = new LinkedList<>();
+	Queue<Event> eventsQ;
+	
+	public Client(int clientId, String destIPAddress) {
+		this.clientId = clientId;
+		this.destIPAddress = destIPAddress;
+		this.eventsQ = new LinkedList<>();
 		
 		try {
-			this.clientId = clientId;
-			notificationsSocket = new ServerSocket(Utils.CLIENT_NOTIF_PORT);
-			RecNotifThread receiveNotThread = new RecNotifThread(notificationsSocket, eventsQ);
+			RecNotifThread receiveNotThread = new RecNotifThread(new ServerSocket(Utils.CLIENT_NOTIF_PORT), eventsQ);
 			receiveNotThread.start();
-			
-			/*new Thread(
-		            new Runnable(
-		            		notificationsSocket, "Multithreaded Server")
-		            ){}.start();*/
-			
+			pullNotifications();
 		} catch (IOException e) {
 			System.out.println("Exception in Client:Client()");
 			System.out.println(e);
 			//e.printStackTrace();
 		}
-		
 		sBuff = new StringBuilder();
+	}
+	
+	public int getId(){
+		return clientId;
+	}
+	
+	private void pullNotifications(){
+		openSocket();
+		printWriter.println(Utils.CMD_PULLNOTIFS);
+		printWriter.flush();
+		String responseStr;
+		while(true){
+			try{
+				responseStr = bReader.readLine();
+				eventsQ.add(Utils.gson.fromJson(responseStr, Event.class));
+				System.out.println("\n" + "*** Notification --> " + responseStr);
+			} catch (JsonSyntaxException | IOException exception){
+				try {
+					socket.close();
+				} catch (IOException e) {
+					System.out.println("IOException in Client:pullNotifications() while closing socket");
+					System.out.println(e);
+					//e.printStackTrace();
+				}
+				//System.out.println("IO or JsonSyntax Exception in Client:pullNotifications()");
+				//System.out.println(exception);
+				//e.printStackTrace();
+				break;
+			}
+		}
+		
 	}
 	
 	private void openSocket(){
 		try {
-			socket = new Socket(Utils.DEF_HNAME, Utils.DEF_PORT);
+			socket = new Socket(destIPAddress, Utils.DEF_PORT);
 			printWriter = new PrintWriter(socket.getOutputStream(),true);
 			bReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			printWriter.println(clientId+"");
@@ -82,12 +111,10 @@ public class Client {
 			System.out.println(e);
 			//e.printStackTrace();
 		}
-		if(response.equals(Utils.STATUS_OKAY)) 
-			return true;
-		return false;
+		return response.equals(Utils.STATUS_OKAY) ? true: false; 
 	}
 	
-	public String readTillEnd(){
+	/*public String readTillEnd(){
 		sBuff.setLength(0);
 		String inputLine = null;
 		try {
@@ -102,7 +129,7 @@ public class Client {
 		}
 			
 		return sBuff.toString();
-	}
+	}*/
 	
 	/*public boolean closeSocket(){
 		try {
@@ -123,7 +150,7 @@ public class Client {
 	public static void main(String[] args)
 	{
 		try
-		{	Client cl = new Client(2);
+		{	Client cl = new Client(2, "");
 			cl.socket = new Socket("localhost",2567);
 			/*
 				printWriter = new PrintWriter(socket.getOutputStream(),true);

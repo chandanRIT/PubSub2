@@ -8,17 +8,9 @@ import other.Utils;
 
 public class PubSubAgent extends Client{
 
-	private int id;
-	
-	public PubSubAgent(int id){
-		super(id);
+	public PubSubAgent(int id, String ipAddress){
+		super(id, ipAddress);
 	}
-	
-	public int getId(){
-		return id;
-	}
-	
-	 
 	
 	public boolean subscribe(String topicName) {
 		return sendReqAndRecResp(Utils.CMD_SUB, topicName);
@@ -56,11 +48,11 @@ public class PubSubAgent extends Client{
 	}*/
 
 	public boolean publish(String topicName, String eventTitle, String eventContent) {
-		return sendReqAndRecResp(Utils.CMD_EVENT, Utils.gson.toJson(new Event(id, topicName, eventTitle, eventContent)));
+		return sendReqAndRecResp(Utils.CMD_EVENT, Utils.gson.toJson(new Event(getId(), topicName, eventTitle, eventContent)));
 	}
 
 	public boolean advertise(String topicName) {
-		return sendReqAndRecResp(Utils.CMD_TOPIC, Utils.gson.toJson(new Topic(id, topicName)));
+		return sendReqAndRecResp(Utils.CMD_TOPIC, Utils.gson.toJson(new Topic(getId(), topicName)));
 	}
 
 	public boolean unSubscribeKW(String keyword) {

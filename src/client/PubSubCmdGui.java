@@ -1,7 +1,6 @@
 package client;
 
 
-import java.io.Console;
 import java.util.Scanner;
 
 public class PubSubCmdGui {
@@ -20,21 +19,21 @@ public class PubSubCmdGui {
 						 "7. Exit \n" +
 						 "Please Choose: ";
 	
-	final static String USAGE_ERROR = "Usage Error! \nUsage: java PubSubCmdGui <Numeric pubId>";
+	final static String USAGE_ERROR = "Usage Error! \nUsage: java PubSubCmdGui <Numeric pubId> <IPAddress>";
 	
 	public PubSubAgent psAgent;
 	
-	public PubSubCmdGui(int agentId){
-		psAgent = new PubSubAgent(agentId);
+	public PubSubCmdGui(int agentId, String ipAddress){
+		psAgent = new PubSubAgent(agentId, ipAddress);
 	}
 	
 	public static void main(String[] args) {
-		if(args.length != 1 || !checkIfStrIsInt(args[0])) {
+		if(args.length != 2 || !checkIfStrIsInt(args[0])) {
 			System.out.println(USAGE_ERROR);
 			return;
 		};
 		
-		PubSubCmdGui cmdGui = new PubSubCmdGui(Integer.parseInt(args[0]));
+		PubSubCmdGui cmdGui = new PubSubCmdGui(Integer.parseInt(args[0]), args[1]);
 		System.out.println("Agent ID: " + cmdGui.psAgent.getId());
 		
 		Scanner sc = new Scanner(System.in);
@@ -72,6 +71,8 @@ public class PubSubCmdGui {
 						System.out.println("Exiting Anyway ..");
 					*/
 					System.out.println("Exiting Agent ...");
+					cmdGui.psAgent = null;
+					cmdGui = null;
 					return; //exit main/
 				
 				default:

@@ -1,5 +1,6 @@
 package server;
 
+import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.io.IOException;
@@ -63,7 +64,7 @@ public class MultiThreadedServer implements Runnable{
     private void openServerSocket() {
         try {
             serverSocket = new ServerSocket(port);
-            System.out.println("MTS Listening at port: " + port);
+            System.out.println("Event Manager is at IPAddress: " + InetAddress.getLocalHost().getHostAddress() + " and Port: " + port);
         } catch (IOException e) {
         	System.out.println("***IOException in MultiThreadedServer:openServerSocket");
             throw new RuntimeException("Cannot open port "+ port, e);
