@@ -11,9 +11,14 @@ import other.Utils;
 
 import com.google.gson.JsonSyntaxException;
 
+/**
+ * This class implements all the functionalities that support the agent's UI. 
+ * @author kchandan
+ *
+ */
 public class PubSubAgent extends Client{
 	
-	private RecNotifThread recNotThread;
+	private RecNotifThread recNotThread; // Reference to the Notification Thread 
 	
 	public PubSubAgent(int id, String ipAddress){
 		super(id, ipAddress);

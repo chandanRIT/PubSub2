@@ -2,9 +2,9 @@ package client;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
+import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Queue;
@@ -12,8 +12,12 @@ import java.util.Queue;
 import other.Event;
 import other.Utils;
 
+/**
+ * This class is the base class for PubSubAgent class and takes care of the low level networking.
+ * Every Client has an Id and destination IPAddress to connect to.
+ * @author kchandan
+ */
 public class Client {
-
 	Socket socket;
 	PrintWriter printWriter;
 	BufferedReader bReader;
@@ -33,13 +37,13 @@ public class Client {
 
 	protected void openSocket(){
 		try {
-			socket = new Socket(destIPAddress, Utils.DEF_PORT);
+			socket = new Socket();
+			socket.connect(new InetSocketAddress(destIPAddress,Utils.DEF_EM_PORT), 2000);
 			printWriter = new PrintWriter(socket.getOutputStream(),true);
 			bReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 			printWriter.println(clientId+"");
 		} catch (IOException e) {
-			System.out.println("Exception in Client:openSocket()");
-			System.out.println(e);
+			throw new RuntimeException("May be the Server's down");
 			//e.printStackTrace();
 		}
 	}
@@ -103,47 +107,4 @@ public class Client {
 		return !socket.isClosed();
 	}*/
 
-}
-
-class RecNotifThread extends Thread{ //Receive Notification Thread
-
-	private boolean stopRun = false;
-	//Queue<Event> eventsQ;
-	private ServerSocket serverSocket;
-	
-	public RecNotifThread(Queue<Event> eventsQ){
-		//serverSocket = socket;
-		//this.eventsQ = eventsQ;
-	}
-	
-	public void stopRecNotif(){
-		stopRun = true;
-		try {
-			serverSocket.close();
-		} catch (IOException e) {
-			System.out.println("IOException in RecNotifThread:stopRecNotif()");
-			System.out.println(e);
-			//e.printStackTrace();
-		}
-	}
-	
-	public void run(){
-		try {
-			this.serverSocket = new ServerSocket(Utils.CLIENT_NOTIF_PORT);
-			while(true){ //may be use !stopRun here
-				Socket notifSocket = serverSocket.accept();
-				BufferedReader br = new BufferedReader(new InputStreamReader(notifSocket.getInputStream()));
-
-				String line = br.readLine();
-				//this.eventsQ.add(Utils.gson.fromJson(line, Event.class));
-				System.out.println("\n" + "***Notification --> " + line);
-				notifSocket.close();
-			}
-		} catch (IOException e) {
-			if(stopRun) return; //cuz if we intended to stop the server
-			System.out.println("IOException in RecNotifThread:run()");
-			System.out.println(e);
-			//e.printStackTrace();
-		}
-	}
 }

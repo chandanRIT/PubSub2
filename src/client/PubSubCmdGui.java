@@ -8,34 +8,45 @@ import java.util.Scanner;
 import other.Event;
 import other.Utils;
 
+/**
+ * This class handles the UI of the agents. It takes in input from the users and 
+ * @author kchandan
+ *
+ */
 public class PubSubCmdGui {
 
 	/**
 	 * @param args
 	 */
-	static String MENU = //"Agent ID: %s" +
+	final static String MENU = //"Agent ID: %s" +
 						 "\n***** Menu ***** \n" +	
 						 "0. Advertise: <topic-name> \n" +
-						 "1. Subscribe: <topic-name> \n" +
-						 "2. Unsubscribe: <topic-name> \n" +
+						 "1. Subscribe to Topic: <topic-name> \n" +
+						 "2. Unsubscribe from Topic: <topic-name> \n" +
 						 "3. Subscribe to Keyword: <keyword> \n" +
 						 "4. Unsubscribe from Keyword: <keyword> \n" +
-						 "5. Publish: <topic-name>,<event-title>,<event-content> \n" +
-						 "6. Get Advertized Topics \n" +
-						 "7. Get Subscribed Topics \n" +
-						 "8. Get Subscribed Keywords \n" +
+						 "5. Publish: <topic-name>,<event-title>,<event-content>, [space-seperated keywords (optional)] \n" +
+						 "6. Display Advertized Topics \n" +
+						 "7. Display Subscribed Topics \n" +
+						 "8. Display Subscribed Keywords \n" +
 						 "9. Exit \n" +
 						 "Please Choose: ";
 	
 	final static String USAGE_ERROR = "Usage Error! \nUsage: java PubSubCmdGui <Numeric pubId> <IPAddress>";
 	
-	public PubSubAgent psAgent;
+	public PubSubAgent psAgent; //reference to PubSubAgent object which communicates with the Event Manager
 	
 	public PubSubCmdGui(int agentId, String ipAddress){
 		psAgent = new PubSubAgent(agentId, ipAddress);
 	}
 	
-	public static void main(String[] args) {
+	/**
+	 * Handles the UI, takes input from the user and performs corresponding actions
+	 * and displays results or provides feedback.
+	 * @param args
+	 * @throws InterruptedException
+	 */
+	public static void main(String[] args) throws InterruptedException {
 		if(args.length != 2 || !checkIfStrIsInt(args[0])) {
 			System.out.println(USAGE_ERROR);
 			return;
@@ -56,7 +67,7 @@ public class PubSubCmdGui {
 		
 		Scanner sc = new Scanner(System.in);
 		while(true){
-			System.out.println(MENU);
+			System.out.print(MENU);
 			switch(sc.nextLine()){
 				case "0": 
 					cmdGui.handleAdvertise(sc);
@@ -95,15 +106,18 @@ public class PubSubCmdGui {
 					break;	
 				
 				case "9":
-					System.out.println("Exiting Agent ...");
+					System.out.println("\nExiting Agent ...");
 					cmdGui.psAgent.stopNotifThread();
 					return; //exit main/
 				
 				default:
 					System.out.println("\nInvalid Choice entered");
 			}
+			//Thread.sleep(1300);
 		} 
 	}
+	
+	//all the handles for each of the switch-case in the above method is below
 	
 	void handleSubscribe(Scanner sc){
 		System.out.println("\nEnter TopicName to subscribe to below: ");
@@ -210,7 +224,7 @@ public class PubSubCmdGui {
 		System.out.println("\nPublish Events on Topics below: ");
 		String line;
 		while(true){
-			System.out.println("Enter topic, title, content: ");
+			System.out.print("Topic,Title,Content,[keywords space-seperated]:");
 			if ((line = sc.nextLine()).equals("")) return;
 			String[] strArr = line.split(",");
 			if(strArr.length < 3 || strArr.length > 4 ) {
@@ -222,7 +236,7 @@ public class PubSubCmdGui {
 			if(status)
 				System.out.println("Event '" + strArr[1] +  "' published");
 			else
-				System.out.println("Event not published. Event's Topic doesnot exist");
+				System.out.println("Event not published. Specified Topic doesnot exist");
 		}
 	}
 	

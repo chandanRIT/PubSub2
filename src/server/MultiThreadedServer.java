@@ -7,25 +7,34 @@ import java.io.IOException;
 
 import other.Utils;
 
+/**
+ * This class acts as the server. It listens continuously for clients and delegates client request processing
+ * to the WorkerThread object. 
+ * @author kchandan
+ *
+ */
 public class MultiThreadedServer implements Runnable{
 	
-    private int port;
+    private int port; //port at which the server listens for clients
     private ServerSocket serverSocket = null;
     private boolean isStopped = false; //flag which is used in the server loop. Set this to false to stop the server.
     //private Thread runningThread= null;
 
+    //Constructors
     public MultiThreadedServer(){
-        this(Utils.DEF_PORT);
+        this(Utils.DEF_EM_PORT);
     }
     
     public MultiThreadedServer(int port){
         this.port = port;
     }
     
+    /**
+     * The run method for the thread which opens a ServerSocket and waits for clients.
+     * It creates a WorkerThread class and delegates handling of clients requests to it. 
+     * This avoids the bottle-neck issue that may arise at the server.   
+     */
     public void run(){
-        /*synchronized(this){
-            runningThread = Thread.currentThread();
-        }*/
         openServerSocket();
         while(!isStopped()){
             Socket clientSocket = null;
@@ -40,15 +49,22 @@ public class MultiThreadedServer implements Runnable{
                 throw new RuntimeException("Error accepting client connection", e);
             }
             //Process new clients in a different thread 
-            new Thread(new WorkerThread(clientSocket, "Multithreaded Server")).start();
+            new Thread(new WorkerThread(clientSocket)).start();
         }
         System.out.println("Server Stopped.") ;
     }
-
+    
+    /**
+     * @return The state of the server if it's running or if it's stopped.
+     */
     private synchronized boolean isStopped() {
         return isStopped;
     }
 
+    /*
+     * This method is used to stop the server. 
+     * It closes the socket and thus unblocks server.accept() to stop the thread. 
+     */
     public synchronized void stopServer(){
         isStopped = true;
         try {
@@ -58,7 +74,10 @@ public class MultiThreadedServer implements Runnable{
             throw new RuntimeException("Error closing server", e);
         }
     }
-
+    
+    /**
+     * This method creates a Server Socket at the specified port  
+     */
     private void openServerSocket() {
         try {
             serverSocket = new ServerSocket(port);
