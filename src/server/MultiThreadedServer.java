@@ -9,11 +9,10 @@ import other.Utils;
 
 public class MultiThreadedServer implements Runnable{
 	
-    int port;
+    private int port;
     private ServerSocket serverSocket = null;
-   
-    private boolean isStopped = false;
-    private Thread runningThread= null;
+    private boolean isStopped = false; //flag which is used in the server loop. Set this to false to stop the server.
+    //private Thread runningThread= null;
 
     public MultiThreadedServer(){
         this(Utils.DEF_PORT);
@@ -24,9 +23,9 @@ public class MultiThreadedServer implements Runnable{
     }
     
     public void run(){
-        synchronized(this){
+        /*synchronized(this){
             runningThread = Thread.currentThread();
-        }
+        }*/
         openServerSocket();
         while(!isStopped()){
             Socket clientSocket = null;
@@ -38,10 +37,9 @@ public class MultiThreadedServer implements Runnable{
                     System.out.println("Server Stopped.") ;
                     return;
                 }
-                throw new RuntimeException(
-                    "Error accepting client connection", e);
+                throw new RuntimeException("Error accepting client connection", e);
             }
-            //work on client sockets
+            //Process new clients in a different thread 
             new Thread(new WorkerThread(clientSocket, "Multithreaded Server")).start();
         }
         System.out.println("Server Stopped.") ;

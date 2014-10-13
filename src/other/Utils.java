@@ -2,7 +2,7 @@ package other;
 import com.google.gson.Gson;
 
 public class Utils {
-	public final static int DEF_PORT = 2579;
+	public final static int DEF_PORT = 2589;
 	public final static String DEF_HNAME = "localhost";
 	
 	public static final int CLIENT_NOTIF_PORT = 8765;
@@ -21,6 +21,8 @@ public class Utils {
 			CMD_SUBKW = "SUBKW",
 			CMD_UNSUBKW = "UNSUBKW",
 			CMD_LISTSUBTOPICS = "LISTSUBTOPICS",
+			CMD_LISTTOPICS = "CMD_LISTTOPICS",
+			CMD_LISTSUBKWS = "CMD_LISTSUBKWS",
 			CMD_PULLNOTIFS = "PULLNOTIFS",
 			CMD_EXIT = "EXIT";
 			

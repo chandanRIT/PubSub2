@@ -1,15 +1,61 @@
 package client;
 
+import java.io.IOException;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 
 import other.Event;
 import other.Topic;
 import other.Utils;
 
-public class PubSubAgent extends Client{
+import com.google.gson.JsonSyntaxException;
 
+public class PubSubAgent extends Client{
+	
+	private RecNotifThread recNotThread;
+	
 	public PubSubAgent(int id, String ipAddress){
 		super(id, ipAddress);
+		//this.eventsQ = new LinkedList<>();
+		recNotThread = new RecNotifThread(null);
+		recNotThread.start();
+	//pullNotifications();
+	}
+	
+	public void stopNotifThread(){
+		recNotThread.stopRecNotif();
+	}
+	
+	public Queue<Event> pullNotifications(){
+		openSocket();
+		printWriter.println(Utils.CMD_PULLNOTIFS);
+		printWriter.flush();
+		
+		Queue<Event> missedEvents = new LinkedList<>();
+		
+		String responseStr;
+		while(true){
+			try{
+				responseStr = bReader.readLine();
+				missedEvents.add(Utils.gson.fromJson(responseStr, Event.class));
+				//System.out.println("\n" + "Notification --> " + responseStr);
+			} catch (JsonSyntaxException | IOException exception){
+				//System.out.println("IO or JsonSyntax Exception in Client:pullNotifications()");
+				//System.out.println(exception);
+				//e.printStackTrace();
+				break;
+			} finally {
+				try {
+					socket.close();
+				} catch (IOException e) {
+					System.out.println("IOException in Client:pullNotifications() while closing socket");
+					System.out.println(e);
+					//e.printStackTrace();
+				}
+			}
+		}
+		return missedEvents;
 	}
 	
 	public boolean subscribe(String topicName) {
@@ -19,15 +65,50 @@ public class PubSubAgent extends Client{
 	public boolean unsubscribe(String topicName) {
 		return sendReqAndRecResp(Utils.CMD_UNSUB, topicName);
 	}
-
-	public boolean subscribeKW(String kw) {
-		// TODO Auto-generated method stub
-		return false;
+	
+	private List<String> getList(String cmd){
+		openSocket();
+		printWriter.println(cmd);
+		printWriter.flush();
+		
+		List<String> list = null;
+		try {
+			list = (List<String>)Utils.gson.fromJson(bReader.readLine(), List.class);
+			bReader.readLine();
+		} catch (JsonSyntaxException e) {
+			// reaches here only when the sent string is not a gson list
+			//e.printStackTrace();
+		} catch (IOException e) {
+			list = null;
+			System.out.println("IOException in PubSubAgent: getList()");
+			//System.out.println(e);
+			//e.printStackTrace();
+		}
+		finally{
+			try {
+				socket.close();
+			} catch (IOException e) {
+				System.out.println("IOException in PubSubAgent: getList() while closing socket");
+				//e.printStackTrace();
+			}
+		}
+		return list;
 	}
 	
-	public List<Topic> listSubscribedTopics() {
-		// TODO Auto-generated method stub
-		return null;
+	public List<String> getSubscriptions(){
+		return getList(Utils.CMD_LISTSUBTOPICS);
+	}
+
+	public boolean subscribeKW(String kw) {
+		return sendReqAndRecResp(Utils.CMD_SUBKW, kw);
+	}
+	
+	public List<String> getAdvertisements(){
+		return getList(Utils.CMD_LISTTOPICS);
+	}
+	
+	public List<String> getSubscribedKWs(){
+		return getList(Utils.CMD_LISTSUBKWS);
 	}
 
 	/*public boolean closeConn(){
@@ -47,17 +128,17 @@ public class PubSubAgent extends Client{
 		return false;
 	}*/
 
-	public boolean publish(String topicName, String eventTitle, String eventContent) {
-		return sendReqAndRecResp(Utils.CMD_EVENT, Utils.gson.toJson(new Event(getId(), topicName, eventTitle, eventContent)));
+	public boolean publish(String topicName, String title, String content, String[] kws) {
+		return sendReqAndRecResp(Utils.CMD_EVENT, 
+				Utils.gson.toJson(new Event(getId(), topicName, title, content, kws)));
 	}
 
 	public boolean advertise(String topicName) {
 		return sendReqAndRecResp(Utils.CMD_TOPIC, Utils.gson.toJson(new Topic(getId(), topicName)));
 	}
 
-	public boolean unSubscribeKW(String keyword) {
-		// TODO Auto-generated method stub
-		return false;
+	public boolean unSubscribeKW(String kw) {
+		return sendReqAndRecResp(Utils.CMD_UNSUBKW, kw);
 	}
 
 	public boolean unsubscribe() {

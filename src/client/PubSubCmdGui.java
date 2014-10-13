@@ -1,7 +1,12 @@
 package client;
 
 
+import java.util.List;
+import java.util.Queue;
 import java.util.Scanner;
+
+import other.Event;
+import other.Utils;
 
 public class PubSubCmdGui {
 
@@ -10,13 +15,16 @@ public class PubSubCmdGui {
 	 */
 	static String MENU = //"Agent ID: %s" +
 						 "\n***** Menu ***** \n" +	
-						 "1. Advertise: <topic-name> \n" +
-						 "2. Publish: <topic-name> <event-title> <event-content> \n" +
-						 "3. Subscribe: <topic-name> \n" +
-						 "4. Unsubscribe: <topic-name> \n" +
-						 "5. Get Subscribed Topics \n" +
-						 "6. List Events \n" +
-						 "7. Exit \n" +
+						 "0. Advertise: <topic-name> \n" +
+						 "1. Subscribe: <topic-name> \n" +
+						 "2. Unsubscribe: <topic-name> \n" +
+						 "3. Subscribe to Keyword: <keyword> \n" +
+						 "4. Unsubscribe from Keyword: <keyword> \n" +
+						 "5. Publish: <topic-name>,<event-title>,<event-content> \n" +
+						 "6. Get Advertized Topics \n" +
+						 "7. Get Subscribed Topics \n" +
+						 "8. Get Subscribed Keywords \n" +
+						 "9. Exit \n" +
 						 "Please Choose: ";
 	
 	final static String USAGE_ERROR = "Usage Error! \nUsage: java PubSubCmdGui <Numeric pubId> <IPAddress>";
@@ -34,45 +42,61 @@ public class PubSubCmdGui {
 		};
 		
 		PubSubCmdGui cmdGui = new PubSubCmdGui(Integer.parseInt(args[0]), args[1]);
-		System.out.println("Agent ID: " + cmdGui.psAgent.getId());
+		System.out.println("\nAgent ID: " + cmdGui.psAgent.getId());
+		
+		Queue<Event>missedEvents = cmdGui.psAgent.pullNotifications();
+		if (!missedEvents.isEmpty()) {
+			System.out.println("\nMissed notifications below:");
+			int i = 0;
+			for(Event event : missedEvents){
+				System.out.println(i++ +  ". " + Utils.gson.toJson(event));
+			}
+			missedEvents = null;
+		}
 		
 		Scanner sc = new Scanner(System.in);
 		while(true){
 			System.out.println(MENU);
-			String choice = sc.nextLine();
-			switch(choice){
-				case "1": 
+			switch(sc.nextLine()){
+				case "0": 
 					cmdGui.handleAdvertise(sc);
 					break;
 					
-				case "2":
-					cmdGui.handlePublish(sc);
-					break;
-					
-				case "3":
+				case "1":
 					cmdGui.handleSubscribe(sc);
 					break;
 					
-				case "4":
+				case "2":
 					cmdGui.handleUnSubscribe(sc);
 					break;
 					
+				case "3":
+					cmdGui.handleSubscribeKW(sc);
+					break;
+					
+				case "4":
+					cmdGui.handleUnSubscribeKW(sc);
+					break;
+					
 				case "5":
+					cmdGui.handlePublish(sc);
 					break;
-					
+				
 				case "6":
+					cmdGui.handleGetAdvertizedTopics();
+					break;
+				
+				case "7":
+					cmdGui.handleGetSubscribedTopics();
 					break;
 					
-				case "7":
-					/*
-					if(cmdGui.psAgent.closeConn())
-						System.out.println("Exiting ...");
-					else 
-						System.out.println("Exiting Anyway ..");
-					*/
+				case "8":
+					cmdGui.handleGetSubscribedKWs();
+					break;	
+				
+				case "9":
 					System.out.println("Exiting Agent ...");
-					cmdGui.psAgent = null;
-					cmdGui = null;
+					cmdGui.psAgent.stopNotifThread();
 					return; //exit main/
 				
 				default:
@@ -82,7 +106,7 @@ public class PubSubCmdGui {
 	}
 	
 	void handleSubscribe(Scanner sc){
-		System.out.println("\nEnter Topic names to subscribe to below: ");
+		System.out.println("\nEnter TopicName to subscribe to below: ");
 		String topicName;
 		while(true){
 			System.out.print("Enter TopicName: ");
@@ -94,8 +118,21 @@ public class PubSubCmdGui {
 		}
 	}
 	
+	void handleSubscribeKW(Scanner sc){
+		System.out.println("\nEnter Keyword to subscribe to below: ");
+		String kw;
+		while(true){
+			System.out.print("Enter Keyword: ");
+			if ((kw = sc.nextLine()).equals("")) return; // return to main menu on empty string
+			if(this.psAgent.subscribeKW(kw))
+				System.out.println("Subscribed to Keyword: '" + kw +  "'.");
+			else 
+				System.out.println("Failed to subscribe.");
+		}
+	}
+	
 	void handleUnSubscribe(Scanner sc){
-		System.out.println("\nEnter Topic names to unsubscribe from below: ");
+		System.out.println("\nEnter TopicName to unsubscribe from below: ");
 		String topicName;
 		while(true){
 			System.out.print("Enter TopicName: ");
@@ -103,7 +140,56 @@ public class PubSubCmdGui {
 			if(this.psAgent.unsubscribe(topicName))
 				System.out.println("Unsubscribed from Topic: '" + topicName +  "'.");
 			else 
-				System.out.println("No such Topic exists");
+				System.out.println("Subscriber never subscribed to such topic.");
+		}
+	}
+	
+	void handleUnSubscribeKW(Scanner sc){
+		System.out.println("\nEnter keyword to unsubscribe from below: ");
+		String kw;
+		while(true){
+			System.out.print("Enter Keyword: ");
+			if ((kw = sc.nextLine()).equals("")) return; // return to main menu on empty string
+			if(this.psAgent.unSubscribeKW(kw))
+				System.out.println("Unsubscribed from Keyword: '" + kw +  "'.");
+			else 
+				System.out.println("Subscriber never subscribed to such keyword.");
+		}
+	}
+	
+	public void handleGetAdvertizedTopics(){
+		System.out.println("\nAdvertized Topics are as below:");
+		List<String> topics = this.psAgent.getAdvertisements();
+		if(topics == null || topics.isEmpty()){ 
+			System.out.println("No Topics created yet!");
+			return;
+		}
+		for(String t : topics){
+			System.out.println(t);
+		}
+	}
+	
+	public void handleGetSubscribedKWs(){
+		System.out.println("\nSubscribed Keywords for Agent(" + this.psAgent.getId() + ") are as below:");
+		List<String> keywords = this.psAgent.getSubscribedKWs();
+		if(keywords == null || keywords.isEmpty()){ 
+			System.out.println("No subscriptions exist!");
+			return;
+		}
+		for(String t : keywords){
+			System.out.println(t);
+		}
+	}
+	
+	void handleGetSubscribedTopics(){
+		System.out.println("\nSubscribed Topics for Agent(" + this.psAgent.getId() + ") are as below:");
+		List<String> topics = this.psAgent.getSubscriptions();
+		if(topics == null || topics.isEmpty()){ 
+			System.out.println("No Subscriptions exist!");
+			return;
+		}
+		for(String t : topics){
+			System.out.println(t);
 		}
 	}
 	
@@ -127,11 +213,13 @@ public class PubSubCmdGui {
 			System.out.println("Enter topic, title, content: ");
 			if ((line = sc.nextLine()).equals("")) return;
 			String[] strArr = line.split(",");
-			if(strArr.length != 3) {
-				System.out.println("Expecting 3 strings. Invalid number of strings provided."); 
+			if(strArr.length < 3 || strArr.length > 4 ) {
+				System.out.println("Expecting 3 or 4 comma-seperated strings."); 
 				continue;
 			}
-			if(this.psAgent.publish(strArr[0], strArr[1], strArr[2]))
+			boolean status = strArr.length == 3 ? this.psAgent.publish(strArr[0], strArr[1], strArr[2], null) : 
+				this.psAgent.publish(strArr[0], strArr[1], strArr[2], strArr[3].trim().split("[ ]+")); 
+			if(status)
 				System.out.println("Event '" + strArr[1] +  "' published");
 			else
 				System.out.println("Event not published. Event's Topic doesnot exist");
